@@ -762,7 +762,7 @@ _CONFIGS = [
      TrainConfig(
         name="pi0_robocasa",
         model=pi0.Pi0Config(),
-        batch_size=2,
+        batch_size=64,
         data=LeRobotRobocasaDataConfig(
             repo_id="robocasa/data-collection-3000",
             base_config=DataConfig(
@@ -772,8 +772,15 @@ _CONFIGS = [
         ),
         # Note that we load the pi0-FAST base model checkpoint here.
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        num_train_steps=30_000,
-        wandb_enabled=True
+        num_train_steps=30000,
+        wandb_enabled=True,
+        save_interval=5000,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=1000, 
+            peak_lr=2.5e-05, 
+            decay_steps=30000, 
+            decay_lr=2.5e-06
+        )
     ),
 
      TrainConfig(
