@@ -1,3 +1,17 @@
+<!-- convert pi0 jax to lerobot -->
+python lerobot/common/policies/pi0/conversion_scripts/convert_pi0_to_hf_lerobot.py \
+    --checkpoint_dir /home/remi_cadene/.cache/openpi/openpi-assets/checkpoints/pi0_aloha_sim/params \
+    --output_path /home/remi_cadene/.cache/openpi/openpi-assets/checkpoints/pi0_aloha_sim_pytorch
+
+TODO: remember to export PYTHONPATH before running
+
+export PYTHONPATH=/data/ceph_hdd/main/dev/shaoze.yang/code_ly:$PYTHONPATH
+
+python lerobot/common/policies/pi0/conversion_scripts/convert_pi0_to_hf_lerobot.py \
+    --checkpoint_dir ../openpi/checkpoints/pi0_robocasa_v0.1/pi0_0330/25000/params \
+    --output_path ../openpi/checkpoints/pi0_0330_25000_pytorch
+
+
 <!-- stats -->
 Writing stats to: /data/ceph_hdd/main/dev/shaoze.yang/code_ly/openpi/assets/pi0_robocasa/robocasa/data-collection-3000
 
@@ -12,6 +26,10 @@ XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/train.py pi0_fast_robocasa --e
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/train.py pi0_robocasa --exp-name=pi0
 
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/train.py pi0_robocasa --exp-name=pi0 --overwrite
+
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/train.py pi0_robocasa --exp-name=pi0 --resume
+
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/train.py pi0_robocasa_v0.1 --exp-name=pi0_0330 --resume
 
 <!-- pi0 work space-->
 cd /data/ceph_hdd/main/dev/shaoze.yang/code_ly/openpi
@@ -30,8 +48,11 @@ python
 <!-- run stats before fintune -->
 python scripts/compute_norm_stats.py --config-name pi0_fast_robocasa
 
-python scripts/compute_norm_stats.py --config-name pi0_robocasa
+python scripts/compute_norm_stats.py --config-name pi0_robocasa_v0.1
 
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 python scripts/compute_norm_stats.py --config-name pi0_robocasa_v0.1
+
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 python scripts/compute_norm_stats.py --config-name pi0_robocasa_v0.1
 
 <!-- pi0 finetune checkpoints -->
 /data/ceph_hdd/main/dev/zim.gong/lerobot/outputs/train/2025-03-11/11-02-21_pi0/checkpoints

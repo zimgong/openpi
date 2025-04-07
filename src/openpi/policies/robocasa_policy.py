@@ -10,7 +10,7 @@ from openpi.models import model as _model
 def make_robocasa_example() -> dict:
     """Creates a random input example for the RoboCasa policy."""
     return {
-        "observation/state": np.random.rand(26),  
+        "observation/state": np.random.rand(13),  
         "observation/agentview_left": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
         "observation/agentview_right": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
         "observation/eye_in_hand": np.random.randint(256, size=(224, 224, 3), dtype=np.uint8),
