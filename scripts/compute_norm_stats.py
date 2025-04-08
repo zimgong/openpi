@@ -38,15 +38,11 @@ def create_dataset(config: _config.TrainConfig) -> tuple[_config.DataConfig, _da
 
 
 def main(config_name: str, max_frames: int | None = None):
-    print("in main")
     config = _config.get_config(config_name)
-    print(f"config: {config}")
     data_config, dataset = create_dataset(config)
 
     num_frames = len(dataset)
     shuffle = False
-
-    print("num_frames:", num_frames)
 
     if max_frames is not None and max_frames < num_frames:
         num_frames = max_frames
@@ -54,8 +50,8 @@ def main(config_name: str, max_frames: int | None = None):
 
     data_loader = _data_loader.TorchDataLoader(
         dataset,
-        local_batch_size=6,
-        num_workers=6,
+        local_batch_size=8,
+        num_workers=8,
         shuffle=shuffle,
         num_batches=num_frames,
     )
@@ -64,7 +60,6 @@ def main(config_name: str, max_frames: int | None = None):
     stats = {key: normalize.RunningStats() for key in keys}
 
     for batch in tqdm.tqdm(data_loader, total=num_frames, desc="Computing stats"):
-        # print(batch.keys())
         for key in keys:
             values = np.asarray(batch[key][0])
             stats[key].update(values.reshape(-1, values.shape[-1]))
@@ -77,5 +72,4 @@ def main(config_name: str, max_frames: int | None = None):
 
 
 if __name__ == "__main__":
-    print("in main")
     tyro.cli(main)

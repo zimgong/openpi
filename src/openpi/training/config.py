@@ -160,11 +160,9 @@ class DataConfigFactory(abc.ABC):
 
     def _load_norm_stats(self, assets_dir: epath.Path, asset_id: str | None) -> dict[str, _transforms.NormStats] | None:
         if asset_id is None:
-            print("asset_id is None")
             return None
         try:
             data_assets_dir = str(assets_dir / asset_id)
-            print(data_assets_dir)
             norm_stats = _normalize.load(_download.maybe_download(data_assets_dir))
             logging.info(f"Loaded norm stats from {data_assets_dir}")
             return norm_stats
@@ -325,16 +323,11 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
             model_transforms=model_transforms,
         )
 
-
-# TODO: 
-# Dataconfig for robocasa
-# 
+ 
 @dataclasses.dataclass(frozen=True)
 class LeRobotRobocasaDataConfig(DataConfigFactory):
     """
     This config is used to configure transforms that are applied at various parts of the data pipeline.
-    For your own dataset, you can copy this class and modify the transforms to match your dataset based on the
-    comments below.
     """
     
     # Action keys that will be used to read the action sequence from the dataset.
@@ -354,12 +347,11 @@ class LeRobotRobocasaDataConfig(DataConfigFactory):
             inputs=[
                 _transforms.RepackTransform(
                     {
-                        # Map from dataset format to the format expected by RoboCasaInputs
                         "observation/agentview_left": "observation.images.agentview_left",
                         "observation/agentview_right": "observation.images.agentview_right", 
                         "observation/eye_in_hand": "observation.images.eye_in_hand",
                         "observation/state": "observation.state",
-                        "actions": "action",  # Map "action" from dataset to "actions" expected by policy
+                        "actions": "action",
                         "prompt": "prompt",
                     }
                 )
@@ -739,32 +731,12 @@ _CONFIGS = [
         num_train_steps=10,
         wandb_enabled=False,
     ),
-    # TODO:
-    # self-defined config for robocasa dataset
-    #  
     TrainConfig(
-        name="pi0_fast_robocasa",
-        model=pi0_fast.Pi0FASTConfig(action_dim=13, action_horizon=10, max_token_len=180),
-        batch_size=2,
-        data=LeRobotRobocasaDataConfig(
-            repo_id="robocasa/data-collection-3000",
-            base_config=DataConfig(
-                local_files_only=True,  # Set to True for local-only datasets.
-                prompt_from_task=True,
-            ),
-        ),
-        # Note that we load the pi0-FAST base model checkpoint here.
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        num_train_steps=30_000,
-        wandb_enabled=True
-    ),
-     
-     TrainConfig(
         name="pi0_robocasa",
         model=pi0.Pi0Config(),
         batch_size=64,
         data=LeRobotRobocasaDataConfig(
-            repo_id="robocasa/data-collection-3000",
+            repo_id="robocasa/data",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
@@ -782,25 +754,7 @@ _CONFIGS = [
             decay_lr=2.5e-06
         )
     ),
-
-     TrainConfig(
-        name="pi0_robocasa_low_mem_finetune",
-        model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
-        batch_size=2,
-        data=LeRobotRobocasaDataConfig(
-            repo_id="robocasa/data-collection-3000",
-            base_config=DataConfig(
-                local_files_only=True,  # Set to True for local-only datasets.
-                prompt_from_task=True,
-            ),
-        ),
-        # Note that we load the pi0-FAST base model checkpoint here.
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        num_train_steps=30_000,
-        wandb_enabled=True
-    ),
-
-     TrainConfig(
+    TrainConfig(
         name="pi0_robocasa_v0.1",
         model=pi0.Pi0Config(),
         batch_size=48,
@@ -820,6 +774,27 @@ _CONFIGS = [
             warmup_steps=1000, 
             peak_lr=2.5e-05, 
             decay_steps=30000, 
+            decay_lr=2.5e-06
+        )
+    ),
+    TrainConfig(
+        name="pi0_robocasa_v0.1_overfit",
+        model=pi0.Pi0Config(),
+        data=LeRobotRobocasaDataConfig(
+            repo_id="robocasa/PnPStoveToCounter",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
+        num_train_steps=30_000,
+        wandb_enabled=True,
+        save_interval=5000,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=1000, 
+            peak_lr=2.5e-05, 
+            decay_steps=30_000, 
             decay_lr=2.5e-06
         )
     ),

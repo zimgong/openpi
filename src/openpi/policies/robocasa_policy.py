@@ -31,9 +31,6 @@ def _parse_image(image) -> np.ndarray:
 class RoboCasaInputs(transforms.DataTransformFn):
     """
     This class is used to convert inputs to the model to the expected format. It is used for both training and inference.
-    
-    RoboCasa dataset contains 26-dimensional state observations and 13-dimensional actions.
-    It has three camera views: agentview_left, agentview_right, and eye_in_hand.
     """
 
     # The action dimension of the model. Will be used to pad state and actions for pi0 model (not pi0-FAST).
@@ -46,23 +43,23 @@ class RoboCasaInputs(transforms.DataTransformFn):
         # We only mask padding for pi0 model, not pi0-FAST.
         mask_padding = self.model_type == _model.ModelType.PI0
 
-        # Pad the proprioceptive input (state) to the action dimension of the model
+        # Pad the proprioceptive input to the action dimension of the model.
         state = transforms.pad_to_dim(data["observation/state"], self.action_dim)
 
-        # Parse the three camera views provided in RoboCasa dataset
+        # Parse images to uint8 (H,W,C) since LeRobot automatically
+        # stores as float32 (C,H,W), gets skipped for policy inference.
+        # Pi0 models support three image inputs at the moment: one third-person view,
+        # and two wrist views (left and right). 
         agentview_left = _parse_image(data["observation/agentview_left"])
         agentview_right = _parse_image(data["observation/agentview_right"])
         eye_in_hand = _parse_image(data["observation/eye_in_hand"])
 
-        # Create inputs dict with appropriate camera view mapping
+        # Create inputs dict.
         inputs = {
             "state": state,
             "image": {
-                # Use the agent view (third-person perspectives) as the base view
                 "base_0_rgb": eye_in_hand,
-                # Use eye-in-hand as the left wrist image
                 "left_wrist_0_rgb": agentview_left,
-                # Use the right agent view for the right wrist image
                 "right_wrist_0_rgb": agentview_right,
             },
             "image_mask": {
@@ -72,12 +69,14 @@ class RoboCasaInputs(transforms.DataTransformFn):
             },
         }
 
-        # Pad actions to the model action dimension (for training)
+        # Pad actions to the model action dimension.
+        # Actions are only available during training.
         if "actions" in data:
+            # We are padding to the model action dim.
             actions = transforms.pad_to_dim(data["actions"], self.action_dim)
             inputs["actions"] = actions
 
-        # Pass the prompt if available
+        # Pass the prompt (aka language instruction) to the model.
         if "prompt" in data:
             inputs["prompt"] = data["prompt"]
 
@@ -87,12 +86,11 @@ class RoboCasaInputs(transforms.DataTransformFn):
 @dataclasses.dataclass(frozen=True)
 class RoboCasaOutputs(transforms.DataTransformFn):
     """
-    This class is used to convert outputs from the model back to the dataset specific format.
-    It is used for inference only.
-    
-    RoboCasa uses 13-dimensional actions.
+    This class is used to convert outputs from the model back to the dataset specific format. It is 
+    used for inference only.
     """
 
     def __call__(self, data: dict) -> dict:
-        # Return the first 13 actions (RoboCasa's action dimension)
-        return {"actions": np.asarray(data["actions"][:, :13])}
+        # Only return the first N actions -- since we padded actions above to fit the model action
+        # dimension, we need to now parse out the correct number of actions in the return dict.
+        return {"actions": np.asarray(data["actions"][:, :12])}
